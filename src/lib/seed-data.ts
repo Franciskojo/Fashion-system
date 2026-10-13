@@ -53,6 +53,7 @@ export const INITIAL_USERS: User[] = [
   },
 ];
 
+
 export const INITIAL_COURSES: Course[] = [
   {
     id: 'course-1',
