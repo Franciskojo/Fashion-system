@@ -17,7 +17,9 @@ export const metadata: Metadata = {
   title: "StitchFlow — Tailoring Business & Fashion School Management System",
   description: "One System. Many Possibilities. Manage students, workers, customer orders and entire tailoring operations in one place.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 
