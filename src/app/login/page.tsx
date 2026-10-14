@@ -51,9 +51,6 @@ export default function LoginPage() {
             <span className="text-xl font-black tracking-tight bg-gradient-to-r from-pink-300 via-rose-200 to-purple-200 bg-clip-text text-transparent">
               StitchFlow
             </span>
-            <span className="ml-2 text-[10px] uppercase font-bold px-1.5 py-0.5 bg-purple-500/30 text-purple-200 rounded border border-purple-400/30">
-              Enterprise
-            </span>
           </div>
         </div>
 
