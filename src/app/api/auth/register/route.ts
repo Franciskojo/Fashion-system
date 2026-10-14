@@ -1,40 +1,52 @@
-import { NextResponse } from 'next/server';
-import { signAuthToken } from '@/lib/auth';
-import { User, Role } from '@/lib/types';
+import { randomUUID } from 'node:crypto';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { AUTH_COOKIE, sessionCookieOptions, signAuthToken } from '@/lib/auth';
 import { DbService } from '@/lib/db-service';
+import { MIN_PASSWORD_LENGTH } from '@/lib/policy';
+import { json, readJsonBody, serverError } from '@/lib/api-guard';
+import { User } from '@/lib/types';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Public self-registration. Accounts are always created as customers; staff accounts are provisioned by an admin. */
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role, phone } = await req.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Name, email and password are required.' },
-        { status: 400 }
+    const limit = rateLimit(`register:${clientIp(req)}`, 5, 60 * 60_000);
+    if (!limit.allowed) {
+      return json(
+        { success: false, error: 'Too many sign-ups. Please try again later.' },
+        429,
+        { 'Retry-After': String(limit.retryAfter) }
       );
     }
 
-    const existingUser = await DbService.getUserByEmail(email);
+    const body = await readJsonBody(req);
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+    const phone = typeof body?.phone === 'string' ? body.phone.trim().slice(0, 30) : '';
 
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'An account with this email already exists.' },
-        { status: 409 }
-      );
+    if (!name || name.length > 100 || !EMAIL_RE.test(email) || email.length > 254) {
+      return json({ success: false, error: 'Please provide a valid name and email address.' }, 400);
+    }
+    if (password.length < MIN_PASSWORD_LENGTH || password.length > 200) {
+      return json({ success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }, 400);
     }
 
-    const userRole: Role = role || 'customer';
+    if (await DbService.getUserByEmail(email)) {
+      return json({ success: false, error: 'An account with this email already exists.' }, 409);
+    }
+
     const newUser: User = {
-      id: `user-${Date.now()}`,
+      id: `user-${randomUUID()}`,
       name,
       email,
       password,
-      role: userRole,
-      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-      phone: phone || '+233 24 000 0000',
+      role: 'customer',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      phone: phone || undefined,
       status: 'active',
     };
-
     await DbService.createUser(newUser);
 
     const sessionData = {
@@ -45,25 +57,10 @@ export async function POST(req: Request) {
       avatar: newUser.avatar,
     };
 
-    const token = await signAuthToken(sessionData);
-
-    const response = NextResponse.json({
-      success: true,
-      user: sessionData,
-      token,
-    });
-
-    response.cookies.set('stitchflow_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-
+    const response = json({ success: true, user: sessionData });
+    response.cookies.set(AUTH_COOKIE, await signAuthToken(sessionData), sessionCookieOptions());
     return response;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  } catch (error) {
+    return serverError(error);
   }
 }

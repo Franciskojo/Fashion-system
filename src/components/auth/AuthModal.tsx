@@ -34,7 +34,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState<Role>('customer');
   const [regPhone, setRegPhone] = useState('');
 
   if (!isOpen) return null;
@@ -62,11 +61,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    const res = await register(regName, regEmail, regPassword, regRole, regPhone);
+    const res = await register(regName, regEmail, regPassword, regPhone);
     setIsSubmitting(false);
 
     if (res.success) {
-      if (onSuccessRole) onSuccessRole(regRole);
+      if (onSuccessRole) onSuccessRole('customer');
       onClose();
     } else {
       setErrorMsg(res.error || 'Registration failed');
@@ -218,29 +217,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Account Type</label>
-                <select
-                  value={regRole}
-                  onChange={(e: any) => setRegRole(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="customer">Customer (Bespoke)</option>
-                  <option value="student">Academy Student</option>
-                  <option value="worker">Tailoring Artisan</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={regPhone}
-                  onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="+233 24..."
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
+            <div>
+              <label className="block font-bold text-gray-700 mb-1">Phone Number</label>
+              <input
+                type="text"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+                placeholder="+233 24..."
+                className="w-full p-2.5 bg-white border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-purple-500"
+              />
             </div>
 
             <div>
@@ -250,6 +235,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <input
                   type="password"
                   value={regPassword}
+                  minLength={8}
+                  autoComplete="new-password"
                   onChange={(e) => setRegPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-purple-500"

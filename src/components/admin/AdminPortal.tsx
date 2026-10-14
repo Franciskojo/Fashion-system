@@ -159,8 +159,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [editCourseModules, setEditCourseModules] = useState<string[]>([]);
   const [newModuleInput, setNewModuleInput] = useState('');
 
-  // Accounts & Password reveal state
-  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  // Accounts & Password provisioning state
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [resetModalUser, setResetModalUser] = useState<User | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
@@ -488,15 +487,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
-  const togglePasswordReveal = (userId: string) => {
-    setRevealedPasswords((prev) => ({
-      ...prev,
-      [userId]: !prev[userId],
-    }));
-  };
-
   const handleCopyCredentials = (u: User) => {
-    const text = `StitchFlow Login Credentials\nName: ${u.name}\nRole: ${u.role.toUpperCase()}\nLogin Email: ${u.email}\nPassword: ${u.password || 'stitchflow123'}\nURL: http://localhost:3000/login`;
+    const text = `StitchFlow Login Details\nName: ${u.name}\nRole: ${u.role.toUpperCase()}\nLogin Email: ${u.email}\nURL: ${window.location.origin}/login\n(Use "Reset" to issue a new password for this account.)`;
     navigator.clipboard.writeText(text);
     setCopiedId(u.id);
     setTimeout(() => setCopiedId(null), 3000);
@@ -2055,15 +2047,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   <th className="p-4">User &amp; Profile</th>
                   <th className="p-4">Role</th>
                   <th className="p-4">Login Email</th>
-                  <th className="p-4">Assigned Login Password</th>
+                  <th className="p-4">Password</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredUsers.map((u) => {
-                  const isRevealed = !!revealedPasswords[u.id];
-                  const passwordValue = u.password || 'stitchflow123';
                   const roleBadgeColors: Record<string, string> = {
                     owner: 'bg-purple-100 text-purple-900 border-purple-200',
                     admin: 'bg-blue-100 text-blue-900 border-blue-200',
@@ -2099,15 +2089,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200/80 w-fit">
                           <Lock className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                           <span className="font-mono text-xs font-bold text-gray-800">
-                            {isRevealed ? passwordValue : '••••••••••••'}
+                            Encrypted
                           </span>
-                          <button
-                            onClick={() => togglePasswordReveal(u.id)}
-                            className="text-gray-400 hover:text-gray-600 ml-1 p-0.5"
-                            title={isRevealed ? 'Hide Password' : 'Show Password'}
-                          >
-                            {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
                         </div>
                       </td>
 
@@ -2543,6 +2526,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <input
                   type="text"
                   value={newPasswordInput}
+                  minLength={8}
+                  autoComplete="new-password"
                   onChange={(e) => setNewPasswordInput(e.target.value)}
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-xl font-mono font-bold text-sm focus:ring-2 focus:ring-purple-500"
                   required

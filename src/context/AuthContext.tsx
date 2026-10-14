@@ -1,85 +1,72 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Role } from '@/lib/types';
-import { AuthSession } from '@/lib/auth';
-import { INITIAL_USERS } from '@/lib/seed-data';
+import type { AuthSession } from '@/lib/auth';
 
 interface AuthContextType {
   user: AuthSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string, role?: Role) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, role: Role, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  switchDemoUser: (role: Role) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+async function postJson(url: string, body: unknown) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json().catch(() => ({}));
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session from localStorage; no session means the user must sign in
+  // The session lives in an httpOnly cookie; the server is the source of truth.
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const stored = localStorage.getItem('stitchflow_auth_user');
-        if (stored) {
-          setUser(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error('Auth initialization error', e);
-      } finally {
-        setIsLoading(false);
-      }
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.success && data.user) setUser(data.user);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    initAuth();
   }, []);
 
-  const login = async (email: string, password?: string, role?: Role) => {
+  const login: AuthContextType['login'] = async (email, password) => {
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role }),
-      });
-      const data = await res.json();
-
+      const data = await postJson('/api/auth/login', { email, password });
       if (data.success && data.user) {
         setUser(data.user);
-        localStorage.setItem('stitchflow_auth_user', JSON.stringify(data.user));
         return { success: true };
-      } else {
-        return { success: false, error: data.error || 'Login failed' };
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Network error';
-      return { success: false, error: message };
+      return { success: false, error: data.error || 'Login failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 
-  const register = async (name: string, email: string, password: string, role: Role, phone?: string) => {
+  const register: AuthContextType['register'] = async (name, email, password, phone) => {
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, phone }),
-      });
-      const data = await res.json();
-
+      const data = await postJson('/api/auth/register', { name, email, password, phone });
       if (data.success && data.user) {
         setUser(data.user);
-        localStorage.setItem('stitchflow_auth_user', JSON.stringify(data.user));
         return { success: true };
-      } else {
-        return { success: false, error: data.error || 'Registration failed' };
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Network error';
-      return { success: false, error: message };
+      return { success: false, error: data.error || 'Registration failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 
@@ -90,34 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Logout error', e);
     }
     setUser(null);
-    localStorage.removeItem('stitchflow_auth_user');
     window.location.href = '/login';
-  };
-
-  const switchDemoUser = (role: Role) => {
-    const target = INITIAL_USERS.find((u) => u.role === role) || INITIAL_USERS[0];
-    const session: AuthSession = {
-      userId: target.id,
-      email: target.email,
-      name: target.name,
-      role: target.role,
-      avatar: target.avatar,
-    };
-    setUser(session);
-    localStorage.setItem('stitchflow_auth_user', JSON.stringify(session));
   };
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        register,
-        logout,
-        switchDemoUser,
-      }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

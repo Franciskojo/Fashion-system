@@ -43,3 +43,6 @@ next-env.d.ts
 # local env files
 .env
 .env*.local
+
+# keep the safe template tracked
+!.env.example

@@ -15,7 +15,6 @@ import {
   Sparkle,
   LogIn,
   LogOut,
-  User,
   ChevronDown
 } from 'lucide-react';
 
@@ -134,19 +133,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          onOpenAuthModal();
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-purple-50 text-purple-900 font-semibold flex items-center justify-between"
-                      >
-                        <span className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-purple-600" />
-                          <span>Switch Account</span>
-                        </span>
-                      </button>
-
                       <button
                         onClick={() => {
                           logout();

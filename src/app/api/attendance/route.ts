@@ -1,23 +1,15 @@
-import { NextResponse } from 'next/server';
 import { DbService } from '@/lib/db-service';
+import { json, requireSession, serverError } from '@/lib/api-guard';
 
-export async function GET() {
+/** GET: attendance records the signed-in user may see (staff: all, others: their own). */
+export async function GET(req: Request) {
   try {
-    const attendance = await DbService.getAttendance();
-    return NextResponse.json({ success: true, data: attendance });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
+    const auth = await requireSession(req);
+    if ('response' in auth) return auth.response;
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const record = await DbService.markAttendance(body);
-    return NextResponse.json({ success: true, data: record }, { status: 201 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const attendance = await DbService.attendanceFor(auth.session);
+    return json({ success: true, data: attendance });
+  } catch (error) {
+    return serverError(error);
   }
 }

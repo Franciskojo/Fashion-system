@@ -47,6 +47,14 @@ import {
   Ruler
 } from 'lucide-react';
 
+/** Generates a strong random password (cryptographically secure). */
+function generatePassword(length = 12): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
+
 /** Returns a persistent anonymous ID for this browser/device (stored in localStorage). */
 function getDeviceId(): string {
   try {
@@ -87,6 +95,11 @@ export default function Home() {
   useEffect(() => {
     setActiveSubTab('');
   }, [activeRole]);
+
+  // Only owners and admins may preview other portals; everyone else stays on their own.
+  const handleSelectRole = (role: Role) => {
+    if (user?.role === 'owner' || user?.role === 'admin') setActiveRole(role);
+  };
 
   // Application Dynamic State
   const [users, setUsers] = useState<User[]>([]);
@@ -143,14 +156,14 @@ export default function Home() {
   const [newStudentName, setNewStudentName] = useState('');
   const [newStudentEmail, setNewStudentEmail] = useState('');
   const [newStudentPhone, setNewStudentPhone] = useState('');
-  const [newStudentPassword, setNewStudentPassword] = useState('STF-Pass-2026');
+  const [newStudentPassword, setNewStudentPassword] = useState(() => generatePassword());
   const [newStudentCourseId, setNewStudentCourseId] = useState('course-1');
 
   // New Worker Form
   const [newWorkerName, setNewWorkerName] = useState('');
   const [newWorkerEmail, setNewWorkerEmail] = useState('');
   const [newWorkerPhone, setNewWorkerPhone] = useState('');
-  const [newWorkerPassword, setNewWorkerPassword] = useState('STF-Tailor-2026');
+  const [newWorkerPassword, setNewWorkerPassword] = useState(() => generatePassword());
   const [newWorkerRoleTitle, setNewWorkerRoleTitle] = useState('Senior Tailor');
   const [newWorkerSpecialization, setNewWorkerSpecialization] = useState('Suits & Agbada');
   const [newWorkerBaseSalary, setNewWorkerBaseSalary] = useState(3000);
@@ -300,7 +313,7 @@ export default function Home() {
     e.preventDefault();
     const course = courses.find((c) => c.id === newStudentCourseId) || courses[0];
     const pin = String(Math.floor(1000 + Math.random() * 9000));
-    const assignedPassword = newStudentPassword || `STF-${pin}`;
+    const assignedPassword = newStudentPassword || generatePassword();
     const studentId = `STF-2026-${String(students.length + 1).padStart(4, '0')}`;
     const userId = `user-student-${Date.now()}`;
 
@@ -430,7 +443,7 @@ export default function Home() {
     e.preventDefault();
     const workerId = `STF-WRK-${String(workers.length + 1).padStart(3, '0')}`;
     const userId = `user-worker-${Date.now()}`;
-    const assignedPassword = newWorkerPassword || `STF-WRK-${Math.floor(1000 + Math.random() * 9000)}`;
+    const assignedPassword = newWorkerPassword || generatePassword();
 
     const newWorker: Worker = {
       id: `worker-${Date.now()}`,
@@ -703,13 +716,13 @@ export default function Home() {
         activeRole={activeRole}
         activeSubTab={activeSubTab}
         onSelectSubTab={(tab) => setActiveSubTab(tab)}
-        onSelectRole={(role) => setActiveRole(role)}
+        onSelectRole={handleSelectRole}
         onOpenAuthModal={() => setShowAuthModal(true)}
         onOpenNewStudent={() => setShowStudentModal(true)}
         onOpenNewWorker={() => setShowWorkerModal(true)}
         onOpenNewOrder={() => setShowOrderModal(true)}
-        onToggleClock={() => handleToggleClock(currentWorker.id)}
-        isClockedIn={currentWorker.isClockedIn}
+        onToggleClock={() => currentWorker && handleToggleClock(currentWorker.id)}
+        isClockedIn={currentWorker?.isClockedIn ?? false}
         stats={stats}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -720,7 +733,7 @@ export default function Home() {
         {/* Top Navbar */}
         <Navbar
           activeRole={activeRole}
-          onSelectRole={(role) => setActiveRole(role)}
+          onSelectRole={handleSelectRole}
           onOpenAuthModal={() => setShowAuthModal(true)}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           stats={stats}
@@ -784,7 +797,7 @@ export default function Home() {
         )}
 
         {/* VIEW 4: STUDENT PORTAL (Ama) */}
-        {activeRole === 'student' && (
+        {activeRole === 'student' && currentStudent && (
           <StudentPortal
             student={currentStudent}
             course={currentCourse}
@@ -807,7 +820,7 @@ export default function Home() {
         )}
 
         {/* VIEW 5: WORKER PORTAL (Akosua) */}
-        {activeRole === 'worker' && (
+        {activeRole === 'worker' && currentWorker && (
           <WorkerPortal
             worker={currentWorker}
             assignedOrders={orders.filter((o) => o.assignedWorkerId === currentWorker.id || !o.assignedWorkerId)}
@@ -936,7 +949,7 @@ export default function Home() {
                   <label className="font-bold text-purple-900 block">Assigned Initial Login Password</label>
                   <button
                     type="button"
-                    onClick={() => setNewStudentPassword(`STF-${Math.floor(1000 + Math.random() * 9000)}`)}
+                    onClick={() => setNewStudentPassword(generatePassword())}
                     className="text-[10px] text-purple-700 font-bold underline"
                   >
                     Generate Random
@@ -1048,7 +1061,7 @@ export default function Home() {
                   <label className="font-bold text-amber-900 block">Assigned Initial Login Password</label>
                   <button
                     type="button"
-                    onClick={() => setNewWorkerPassword(`STF-WRK-${Math.floor(1000 + Math.random() * 9000)}`)}
+                    onClick={() => setNewWorkerPassword(generatePassword())}
                     className="text-[10px] text-amber-700 font-bold underline"
                   >
                     Generate Random
