@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { OwnerDashboard } from '@/components/owner/OwnerDashboard';
@@ -63,7 +64,13 @@ function getDeviceId(): string {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Login is the first page: send visitors without a session to /login
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login');
+  }, [authLoading, user, router]);
   const [activeRole, setActiveRole] = useState<Role>('owner');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -665,6 +672,10 @@ export default function Home() {
     newRecords.forEach((rec) => saveRecord('payroll', rec));
     alert('✓ Monthly Payroll generated and calculated for all active staff!');
   };
+
+  if (authLoading || !user) {
+    return <div className="min-h-screen bg-slate-950" />;
+  }
 
   if (dataError) {
     return (

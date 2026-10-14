@@ -21,25 +21,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize with Owner session by default or from localStorage
+  // Restore session from localStorage; no session means the user must sign in
   useEffect(() => {
     const initAuth = async () => {
       try {
         const stored = localStorage.getItem('stitchflow_auth_user');
         if (stored) {
           setUser(JSON.parse(stored));
-        } else {
-          // Default initial session: Owner (Evelyn)
-          const defaultOwner = INITIAL_USERS[0];
-          const defaultSession: AuthSession = {
-            userId: defaultOwner.id,
-            email: defaultOwner.email,
-            name: defaultOwner.name,
-            role: defaultOwner.role,
-            avatar: defaultOwner.avatar,
-          };
-          setUser(defaultSession);
-          localStorage.setItem('stitchflow_auth_user', JSON.stringify(defaultSession));
         }
       } catch (e) {
         console.error('Auth initialization error', e);
