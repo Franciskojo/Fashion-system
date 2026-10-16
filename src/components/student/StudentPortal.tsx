@@ -11,13 +11,12 @@ import {
   QrCode, 
   CheckCircle2, 
   Sparkles, 
-  Heart,
-  ChevronRight,
   Printer,
   Download,
   ShieldCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { showToast, alertSuccess } from '@/lib/alerts';
 
 interface StudentPortalProps {
   student: Student;
@@ -79,132 +78,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Left Sidebar (Matching Infographic Student Portal Card) */}
-      <div className="space-y-4">
-        {/* Profile Card */}
-        <div className="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-5 text-center relative overflow-hidden shadow-xs">
-          <div className="w-20 h-20 rounded-2xl mx-auto overflow-hidden ring-4 ring-emerald-200 mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
-          </div>
-          <h2 className="text-base font-extrabold text-emerald-950">Welcome, {student.name.split(' ')[0]}</h2>
-          <p className="text-xs text-emerald-800 font-medium">{student.courseTitle.split('&')[0]}</p>
-          <div className="mt-2 inline-block font-mono text-[10px] bg-white/80 px-2.5 py-0.5 rounded-full text-emerald-900 font-bold border border-emerald-200">
-            ID: {student.studentId}
-          </div>
-        </div>
+    <div className="space-y-6">
 
-        {/* Navigation Menu (Direct replica of infographic student menu) */}
-        <div className="bg-white rounded-3xl border border-gray-100 p-2 shadow-xs space-y-1">
-          <button
-            onClick={() => setActiveTab('attendance')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'attendance'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <CalendarCheck className="w-4 h-4" />
-              <span>My Attendance</span>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('courses')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'courses'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <BookOpen className="w-4 h-4" />
-              <span>My Courses</span>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-          </button>
-
-          <button
-            onClick={() => setActiveTab('fees')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'fees'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <CreditCard className="w-4 h-4" />
-              <span>Pay Fees</span>
-            </div>
-            {feeBalance > 0 && (
-              <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.2 rounded-full font-bold">
-                Due
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('progress')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'progress'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4" />
-              <span>My Progress</span>
-            </div>
-            <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 rounded">
-              {student.progressPercentage}%
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('certificate')}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
-              activeTab === 'certificate'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-gray-700 hover:bg-emerald-50/60 hover:text-emerald-900'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <Award className="w-4 h-4" />
-              <span>My Certificate</span>
-            </div>
-            <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-1.5 py-0.5 rounded">
-              Verified
-            </span>
-          </button>
-        </div>
-
-        {/* Motivational Card from Infographic */}
-        <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600 rounded-3xl p-5 text-white shadow-md relative overflow-hidden">
-          <div className="relative z-10 space-y-2">
-            <div className="flex items-center gap-1.5 text-pink-200 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>StitchFlow Academy</span>
-            </div>
-            <h4 className="text-lg font-black leading-tight">
-              Learn Today<br />Create Tomorrow
-            </h4>
-            <p className="text-[11px] text-pink-100 flex items-center gap-1">
-              Skills for a Brighter Future <Heart className="w-3 h-3 text-pink-300 fill-pink-300" />
-            </p>
-          </div>
-          {/* Fashion roll illustration placeholder */}
-          <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-[10px] text-pink-100">
-            <span>Pattern Mastery</span>
-            <span className="font-bold">Term 2 Active</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Workspace (3 Cols) */}
-      <div className="lg:col-span-3 space-y-6">
         {/* TAB 1: ATTENDANCE */}
         {activeTab === 'attendance' && (
           <div className="space-y-6">
@@ -497,7 +372,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </div>
           </div>
         )}
-      </div>
 
       {/* Official Certificate Full Modal */}
       {showCertModal && (

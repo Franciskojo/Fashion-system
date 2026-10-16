@@ -14,6 +14,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { showToast, alertError } from '@/lib/alerts';
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
@@ -33,9 +35,15 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (res.success) {
-      router.push('/');
+      const displayName = res.user?.name || 'Workspace User';
+      showToast.success(`Welcome back, ${displayName}! Loading your dashboard...`);
+      setTimeout(() => {
+        router.push('/');
+      }, 500);
     } else {
-      setErrorMsg(res.error || 'Invalid email or password. Please verify credentials provided by Admin.');
+      const error = res.error || 'Invalid email or password. Please verify credentials provided by Admin.';
+      setErrorMsg(error);
+      showToast.error(error);
     }
   };
 
@@ -127,6 +135,38 @@ export default function LoginPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
+
+          {/* Quick-fill demo credentials */}
+          <div className="pt-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 text-center">
+              Quick Demo Sign-In (Click to Fill)
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { role: 'Owner (Evelyn)', email: 'evelyn@stitchflow.io' },
+                { role: 'Admin (Kwesi)', email: 'kwesi.admin@stitchflow.io' },
+                { role: 'Student (Ama)', email: 'ama.student@stitchflow.io' },
+                { role: 'Worker (Akosua)', email: 'akosua.tailor@stitchflow.io' },
+              ].map((demo) => (
+                <button
+                  key={demo.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(demo.email);
+                    setPassword('stitchflow123');
+                    setErrorMsg(null);
+                  }}
+                  className="p-2 text-left bg-purple-50/70 hover:bg-purple-100 border border-purple-100 rounded-xl transition-all cursor-pointer group"
+                >
+                  <div className="font-bold text-purple-900 text-[11px] flex items-center justify-between">
+                    <span>{demo.role}</span>
+                    <span className="text-[9px] text-purple-600 font-semibold group-hover:underline">fill</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 truncate">{demo.email}</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="pt-3 border-t border-gray-100 text-center text-[11px] text-gray-500">
             Need an account? Please contact StitchFlow Academy Administration or Workshop Reception to be provisioned.

@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { Student, Worker, Order, Course, AttendanceRecord, User } from '@/lib/types';
+import { showToast, alertSuccess, alertConfirm } from '@/lib/alerts';
 import { 
   GraduationCap, 
   Users, 
   CheckCircle2, 
   Search, 
-  UserPlus, 
   QrCode, 
   CalendarCheck,
   ShoppingBag, 
@@ -231,6 +231,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
     if (onUpdateStudent) onUpdateStudent(updated);
     setSelectedStudentForView(updated);
+    showToast.success('Student records updated and synced successfully!');
     setUpdateToast('Student records updated and synced successfully!');
     setTimeout(() => setUpdateToast(null), 3000);
   };
@@ -245,6 +246,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     if (onUpdateStudent) onUpdateStudent(updated);
     setSelectedStudentForView(updated);
     setEditStudentPaidFees(newPaid);
+    showToast.success(`Payment of GH₵ ${amount.toLocaleString()} logged!`);
     setUpdateToast(`Payment of GH₵ ${amount.toLocaleString()} logged!`);
     setTimeout(() => setUpdateToast(null), 3000);
   };
@@ -292,6 +294,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
     if (onUpdateWorker) onUpdateWorker(updated);
     setSelectedWorkerForView(updated);
+    showToast.success('Artisan tailor profile updated successfully!');
     setUpdateToast('Artisan tailor profile updated successfully!');
     setTimeout(() => setUpdateToast(null), 3000);
   };
@@ -306,6 +309,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     if (onUpdateWorker) onUpdateWorker(updated);
     setSelectedWorkerForView(updated);
     setEditWorkerIsClockedIn(newClock);
+    showToast.info(`Shift status changed: ${newClock ? 'Clocked In (Active)' : 'Off-Duty'}`);
     setUpdateToast(`Shift status changed: ${newClock ? 'Clocked In (Active)' : 'Off-Duty'}`);
     setTimeout(() => setUpdateToast(null), 3000);
   };
@@ -491,6 +495,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     const text = `StitchFlow Login Details\nName: ${u.name}\nRole: ${u.role.toUpperCase()}\nLogin Email: ${u.email}\nURL: ${window.location.origin}/login\n(Use "Reset" to issue a new password for this account.)`;
     navigator.clipboard.writeText(text);
     setCopiedId(u.id);
+    showToast.success(`Login credentials for ${u.name} copied to clipboard!`);
     setTimeout(() => setCopiedId(null), 3000);
   };
 
@@ -499,7 +504,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     if (resetModalUser && onResetPassword) {
       onResetPassword(resetModalUser.id, newPasswordInput);
     }
-    alert(`✓ Password for ${resetModalUser?.name} has been updated to "${newPasswordInput}"!`);
+    alertSuccess('Password Updated! 🔑', `Login password for ${resetModalUser?.name} has been updated to "${newPasswordInput}". Credentials synced to database.`);
+    showToast.success(`Password updated for ${resetModalUser?.name}!`);
     setResetModalUser(null);
     setNewPasswordInput('');
   };
@@ -1980,9 +1986,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // =========================================================================
   return (
     <div className="space-y-6">
-      {/* Search and Action Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
+      {/* Search Bar */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative w-full sm:w-96">
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -1991,34 +1997,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
           />
-        </div>
-
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={onOpenNewStudent}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-sm transition-all"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Enroll Student</span>
-          </button>
-
-          <button
-            onClick={onOpenNewWorker}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-bold shadow-sm transition-all"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Add Tailor</span>
-          </button>
-
-          {onOpenNewOrder && (
-            <button
-              onClick={onOpenNewOrder}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-bold shadow-sm transition-all"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>+ New Order</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -2137,6 +2115,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <h3 className="font-bold text-gray-900 text-base">Student Academy Directory</h3>
               <p className="text-xs text-gray-500">Live roster with curriculum completion, fee status, and attendance rates</p>
             </div>
+            <button
+              onClick={onOpenNewStudent}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Enroll Student</span>
+            </button>
           </div>
 
           <div className="overflow-x-auto">

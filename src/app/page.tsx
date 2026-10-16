@@ -32,6 +32,7 @@ function saveRecord<T extends { id: string }>(collection: Collection, doc: T) {
 
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/context/AuthContext';
+import { showToast, alertSuccess, alertWarning, alertError, alertConfirm } from '@/lib/alerts';
 import { 
   KeyRound, 
   Copy, 
@@ -364,6 +365,8 @@ export default function Home() {
       pin,
     });
 
+    showToast.success(`Student account provisioned for ${newStudentName}!`);
+
     setNewStudentName('');
     setNewStudentEmail('');
     setNewStudentPhone('');
@@ -398,6 +401,7 @@ export default function Home() {
         status: updatedStudent.status === 'suspended' ? 'inactive' : 'active',
       });
     }
+    showToast.success(`Student profile for ${updatedStudent.name} updated!`);
   };
 
   // HANDLERS: Update Worker Information (Owner & Admin)
@@ -424,18 +428,21 @@ export default function Home() {
         phone: updatedWorker.phone,
       });
     }
+    showToast.success(`Staff record for ${updatedWorker.name} updated!`);
   };
 
   // HANDLERS: Update Order Information (Owner & Admin)
   const handleUpdateOrder = (updatedOrder: Order) => {
     setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
     saveRecord('orders', updatedOrder);
+    showToast.success(`Order ${updatedOrder.orderNumber || updatedOrder.id} saved!`);
   };
 
   // HANDLERS: Update Course & Curriculum Information (Owner & Admin)
   const handleUpdateCourse = (updatedCourse: Course) => {
     setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
     saveRecord('courses', updatedCourse);
+    showToast.success(`Course "${updatedCourse.title}" updated!`);
   };
 
   // HANDLERS: Provisioning New Worker
@@ -487,6 +494,8 @@ export default function Home() {
       role: `Tailoring Staff (${newWorkerRoleTitle})`,
     });
 
+    showToast.success(`Staff account provisioned for ${newWorkerName}!`);
+
     setNewWorkerName('');
     setNewWorkerEmail('');
     setNewWorkerPhone('');
@@ -498,6 +507,7 @@ export default function Home() {
     );
     const target = users.find((u) => u.id === userId);
     if (target) saveRecord('users', { ...target, password: newPass });
+    showToast.success('Password updated and synced successfully!');
   };
 
   const applyClockToggleLocally = (workerId: string, serverWorker?: Worker) => {
@@ -524,7 +534,7 @@ export default function Home() {
     // Enforce a single clock-in per day (client-side fast check).
     if (!target.isClockedIn && target.lastClockIn) {
       if (new Date(target.lastClockIn).toDateString() === new Date().toDateString()) {
-        alert('You have already clocked in today. Only one shift per day is allowed.');
+        alertWarning('Daily Shift Limit', 'You have already clocked in today. Only one shift per day is allowed.');
         return;
       }
     }
@@ -539,21 +549,28 @@ export default function Home() {
       });
       if (res.status === 409) {
         const json = await res.json().catch(() => null);
-        alert(json?.error || 'You have already clocked in today. Only one shift per day is allowed.');
+        alertWarning('Clock In Limit', json?.error || 'You have already clocked in today. Only one shift per day is allowed.');
         return;
       }
       if (!res.ok) {
-        alert('Could not update the clock status. Please try again.');
+        showToast.error('Could not update the clock status. Please try again.');
         return;
       }
       const json = await res.json();
       serverWorker = json?.data?.worker;
     } catch {
-      alert('Unable to reach the server. Please check your connection and try again.');
+      showToast.error('Unable to reach the server. Please check your connection and try again.');
       return;
     }
 
     applyClockToggleLocally(workerId, serverWorker);
+    const isNowClockedIn = !target.isClockedIn;
+    if (isNowClockedIn) {
+      showToast.success(`Shift started! ${target.name} clocked in successfully.`);
+    } else {
+      showToast.info(`Shift concluded for ${target.name}. Clocked out.`);
+    }
+
     // The server records attendance on clock-in; reload it so the list stays in sync.
     fetch('/api/attendance')
       .then((r) => r.json())
@@ -582,6 +599,7 @@ export default function Home() {
     };
     setAttendance([newRecord, ...attendance]);
     saveRecord('attendance', newRecord);
+    showToast.success(`Attendance logged: ${data.userName} marked ${data.status.toUpperCase()}!`);
   };
 
   const handlePayFee = (amount: number) => {
@@ -590,6 +608,7 @@ export default function Home() {
     const updated: Student = { ...s, paidFees: Math.min(s.totalFees, s.paidFees + amount) };
     setStudents(students.map((x, idx) => (idx === 0 ? updated : x)));
     saveRecord('students', updated);
+    showToast.success(`Tuition payment of GH₵ ${amount.toLocaleString()} processed!`);
   };
 
   const handleCompleteStudentModule = () => {
@@ -605,6 +624,7 @@ export default function Home() {
     };
     setStudents(students.map((x, idx) => (idx === 0 ? updated : x)));
     saveRecord('students', updated);
+    alertSuccess('Module Completed! 🎓', `Academic module verified. Student progress is now ${nextProg}%.`);
   };
 
   const handleCreateCustomerOrder = (data: any) => {
@@ -639,6 +659,8 @@ export default function Home() {
 
     setOrders([newOrder, ...orders]);
     saveRecord('orders', newOrder);
+    alertSuccess('Bespoke Order Confirmed! 👗', `Order ${orderNumber} has been recorded with body measurements and scheduled for tailoring.`);
+    showToast.success(`Order ${orderNumber} placed successfully!`);
   };
 
   const handleAdvanceOrderStatus = (orderId: string, nextStatus: any, note: string) => {
@@ -659,6 +681,7 @@ export default function Home() {
     };
     setOrders(orders.map((o) => (o.id === orderId ? updated : o)));
     saveRecord('orders', updated);
+    showToast.success(`Order status updated: ${String(nextStatus).toUpperCase()}`);
   };
 
   const handleGenerateMonthlyPayroll = () => {
@@ -683,7 +706,8 @@ export default function Home() {
 
     setPayroll([...newRecords, ...payroll]);
     newRecords.forEach((rec) => saveRecord('payroll', rec));
-    alert('✓ Monthly Payroll generated and calculated for all active staff!');
+    alertSuccess('Monthly Payroll Generated! 💼', 'Payroll records calculated with piece-rate commissions for all active staff and saved to database.');
+    showToast.success('Monthly payroll generated successfully!');
   };
 
   if (authLoading || !user) {

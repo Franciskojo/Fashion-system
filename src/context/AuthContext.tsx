@@ -7,8 +7,8 @@ interface AuthContextType {
   user: AuthSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthSession }>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string; user?: AuthSession }>;
   logout: () => Promise<void>;
 }
 
@@ -20,7 +20,11 @@ async function postJson(url: string, body: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => null);
+  if (!data) {
+    return { success: false, error: res.status === 404 ? 'Service endpoint not found (404).' : `Server error (${res.status}).` };
+  }
+  return data;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await postJson('/api/auth/login', { email, password });
       if (data.success && data.user) {
         setUser(data.user);
-        return { success: true };
+        return { success: true, user: data.user };
       }
       return { success: false, error: data.error || 'Login failed' };
     } catch {
@@ -62,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await postJson('/api/auth/register', { name, email, password, phone });
       if (data.success && data.user) {
         setUser(data.user);
-        return { success: true };
+        return { success: true, user: data.user };
       }
       return { success: false, error: data.error || 'Registration failed' };
     } catch {

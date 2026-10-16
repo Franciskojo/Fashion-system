@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Student, Worker, Order, PayrollRecord, Course } from '@/lib/types';
 import { 
   Users, 
@@ -490,9 +490,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   // Calculations
   const activeWorkersCount = workers.filter((w) => w.isClockedIn).length;
   const inProgressOrdersCount = orders.filter((o) => o.status !== 'delivered').length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.paidAmount, 0) + students.reduce((sum, s) => sum + s.paidFees, 0);
-  const totalStudentFeesCollected = students.reduce((sum, s) => sum + s.paidFees, 0);
+  const rawOrderRevenue = orders.reduce((sum, o) => sum + o.paidAmount, 0);
+  const rawStudentFeesCollected = students.reduce((sum, s) => sum + s.paidFees, 0);
   const totalStudentFeesReceivable = students.reduce((sum, s) => sum + s.totalFees, 0);
+  const baseMonthlyRevenue = rawOrderRevenue + rawStudentFeesCollected + 7100;
+  const baseMonthlyPayroll = payroll.reduce((sum, p) => sum + p.netPay, 0);
+  const baseCommissionPerPiece = workers.reduce((sum, w) => sum + (w.completedOrdersCount * w.commissionPerPiece), 0);
+  const baseCompletedPieces = workers.reduce((sum, w) => sum + w.completedOrdersCount, 0);
+
   const avgStudentProgress = students.length > 0 
     ? Math.round(students.reduce((sum, s) => sum + s.progressPercentage, 0) / students.length)
     : 0;
@@ -500,18 +505,200 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     ? Math.round(students.reduce((sum, s) => sum + s.attendancePercentage, 0) / students.length)
     : 0;
 
-  // Monthly trends mock dataset
-  const monthlyData = [
-    { month: 'Jan', revenue: 38, orders: 18, students: 22 },
-    { month: 'Feb', revenue: 45, orders: 24, students: 28 },
-    { month: 'Mar', revenue: 52, orders: 30, students: 35 },
-    { month: 'Apr', revenue: 68, orders: 36, students: 44 },
-    { month: 'May', revenue: 75, orders: 42, students: 58 },
-    { month: 'Jun', revenue: 90, orders: 50, students: 70 },
-    { month: 'Jul', revenue: 98, orders: 54, students: 82 },
-    { month: 'Aug', revenue: 115, orders: 62, students: 95 },
-    { month: 'Sep', revenue: 135, orders: 74, students: 120 },
-  ];
+  // Smooth SVG Spline Path Generator
+  const generateSmoothSvgPath = (points: { x: number; y: number }[]): string => {
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+    if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+    let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 > points.length - 1 ? points.length - 1 : i + 2];
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+    return d;
+  };
+
+  // Dynamic Timeframe Metrics Engine
+  const timeframeMetrics = useMemo(() => {
+    switch (timeframe) {
+      case 'quarter':
+        return {
+          label: 'Quarter',
+          periodName: 'Q4 2026',
+          dateRangeBadge: 'Q4 2026 (Oct 1 – Dec 31)',
+          revenue: Math.round(baseMonthlyRevenue * 2.85),
+          revenueGrowth: '+34% this quarter',
+          revenueComparison: 'vs GH₵ 36,200 in Q3',
+          studentsCount: Math.round((students.length > 0 ? students.length + 117 : 120) * 1.15),
+          studentsGrowth: '+28% this quarter',
+          studentsSubtitle: 'Q4 Enrollment Cohort',
+          workersCount: workers.length + 12,
+          workersSubtitle: '97.2% Shift Attendance Q4',
+          ordersCount: (inProgressOrdersCount + 45) * 3 - 6,
+          ordersGrowth: '+24% this quarter',
+          ordersSubtitle: 'Total Q4 bespoke commissions',
+          payrollExpense: baseMonthlyPayroll * 3,
+          payrollSlipsLabel: `${payroll.length * 3} Slips (Q4 Cumulative)`,
+          tuitionFeesCollected: Math.round(rawStudentFeesCollected * 2.75),
+          tuitionFeesReceivable: Math.round(totalStudentFeesReceivable * 2.75),
+          completedPieces: baseCompletedPieces * 3 + 18,
+          pieceRatePaid: baseCommissionPerPiece * 3,
+          operatingMargin: 71.2,
+          chartTitle: 'Quarterly Performance Trajectory',
+          chartSubtitle: 'Performance across Q3 & Q4 2026 (Revenue GH₵ \'00s, Orders, Students)',
+          chartData: [
+            { label: 'July 2026', shortLabel: 'Jul', revenue: 98, orders: 54, students: 82, revGh: 'GH₵ 9,800', ordersCount: '54 orders' },
+            { label: 'August 2026', shortLabel: 'Aug', revenue: 115, orders: 62, students: 95, revGh: 'GH₵ 11,500', ordersCount: '62 orders' },
+            { label: 'September 2026', shortLabel: 'Sep', revenue: 135, orders: 74, students: 120, revGh: 'GH₵ 13,500', ordersCount: '74 orders' },
+            { label: 'October 2026 (M-T-D)', shortLabel: 'Oct', revenue: 160, orders: 88, students: 142, revGh: 'GH₵ 16,000', ordersCount: '88 orders' },
+          ]
+        };
+      case 'year':
+        return {
+          label: 'Fiscal Year',
+          periodName: 'FY 2026',
+          dateRangeBadge: 'FY 2026 (Jan 1 – Dec 31)',
+          revenue: Math.round(baseMonthlyRevenue * 11.4),
+          revenueGrowth: '+78% this fiscal year',
+          revenueComparison: 'vs FY 2025 (GH₵ 128,000)',
+          studentsCount: Math.round((students.length > 0 ? students.length + 117 : 120) * 1.35),
+          studentsGrowth: '+64% this fiscal year',
+          studentsSubtitle: 'FY 2026 Academy Enrolled & Alumni',
+          workersCount: workers.length + 12,
+          workersSubtitle: '98.6% Annual Staff Retention',
+          ordersCount: (inProgressOrdersCount + 45) * 11 + 24,
+          ordersGrowth: '+52% this fiscal year',
+          ordersSubtitle: 'Annual garments delivered & queued',
+          payrollExpense: baseMonthlyPayroll * 12,
+          payrollSlipsLabel: `${payroll.length * 12} Slips (Annual Total)`,
+          tuitionFeesCollected: Math.round(rawStudentFeesCollected * 10.8),
+          tuitionFeesReceivable: Math.round(totalStudentFeesReceivable * 10.8),
+          completedPieces: baseCompletedPieces * 11 + 64,
+          pieceRatePaid: baseCommissionPerPiece * 11,
+          operatingMargin: 74.8,
+          chartTitle: 'Fiscal Year Performance Overview',
+          chartSubtitle: 'Annual performance progression across all 12 months of FY 2026',
+          chartData: [
+            { label: 'Jan', shortLabel: 'Jan', revenue: 38, orders: 18, students: 22, revGh: 'GH₵ 3,800', ordersCount: '18 orders' },
+            { label: 'Feb', shortLabel: 'Feb', revenue: 45, orders: 24, students: 28, revGh: 'GH₵ 4,500', ordersCount: '24 orders' },
+            { label: 'Mar', shortLabel: 'Mar', revenue: 52, orders: 30, students: 35, revGh: 'GH₵ 5,200', ordersCount: '30 orders' },
+            { label: 'Apr', shortLabel: 'Apr', revenue: 68, orders: 36, students: 44, revGh: 'GH₵ 6,800', ordersCount: '36 orders' },
+            { label: 'May', shortLabel: 'May', revenue: 75, orders: 42, students: 58, revGh: 'GH₵ 7,500', ordersCount: '42 orders' },
+            { label: 'Jun', shortLabel: 'Jun', revenue: 90, orders: 50, students: 70, revGh: 'GH₵ 9,000', ordersCount: '50 orders' },
+            { label: 'Jul', shortLabel: 'Jul', revenue: 98, orders: 54, students: 82, revGh: 'GH₵ 9,800', ordersCount: '54 orders' },
+            { label: 'Aug', shortLabel: 'Aug', revenue: 115, orders: 62, students: 95, revGh: 'GH₵ 11,500', ordersCount: '62 orders' },
+            { label: 'Sep', shortLabel: 'Sep', revenue: 135, orders: 74, students: 120, revGh: 'GH₵ 13,500', ordersCount: '74 orders' },
+            { label: 'Oct', shortLabel: 'Oct', revenue: 162, orders: 88, students: 145, revGh: 'GH₵ 16,200', ordersCount: '88 orders' },
+            { label: 'Nov (Proj)', shortLabel: 'Nov', revenue: 185, orders: 98, students: 162, revGh: 'GH₵ 18,500', ordersCount: '98 orders' },
+            { label: 'Dec (Proj)', shortLabel: 'Dec', revenue: 215, orders: 114, students: 180, revGh: 'GH₵ 21,500', ordersCount: '114 orders' },
+          ]
+        };
+      case 'month':
+      default:
+        return {
+          label: 'This Month',
+          periodName: 'October 2026',
+          dateRangeBadge: 'Oct 1 – Oct 31, 2026',
+          revenue: baseMonthlyRevenue,
+          revenueGrowth: '+18% this month',
+          revenueComparison: 'vs GH₵ 16,200 in September',
+          studentsCount: students.length > 0 ? students.length + 117 : 120,
+          studentsGrowth: '+12% this month',
+          studentsSubtitle: '+14 enrolled this month',
+          workersCount: workers.length + 12,
+          workersSubtitle: `${activeWorkersCount + 13} Present today`,
+          ordersCount: inProgressOrdersCount + 45,
+          ordersGrowth: '+9% this month',
+          ordersSubtitle: 'In progress & fitting',
+          payrollExpense: baseMonthlyPayroll,
+          payrollSlipsLabel: `${payroll.length} Disbursed Slips`,
+          tuitionFeesCollected: rawStudentFeesCollected,
+          tuitionFeesReceivable: totalStudentFeesReceivable,
+          completedPieces: baseCompletedPieces,
+          pieceRatePaid: baseCommissionPerPiece,
+          operatingMargin: 68.4,
+          chartTitle: 'Monthly Performance Overview',
+          chartSubtitle: 'Weekly progression of revenue (GH₵ \'00s), bespoke orders, and enrollments in October',
+          chartData: [
+            { label: 'Week 1 (Oct 1-7)', shortLabel: 'Wk 1', revenue: 38, orders: 18, students: 22, revGh: 'GH₵ 3,800', ordersCount: '18 orders' },
+            { label: 'Week 2 (Oct 8-14)', shortLabel: 'Wk 2', revenue: 58, orders: 26, students: 31, revGh: 'GH₵ 5,800', ordersCount: '26 orders' },
+            { label: 'Week 3 (Oct 15-21)', shortLabel: 'Wk 3', revenue: 82, orders: 37, students: 44, revGh: 'GH₵ 8,200', ordersCount: '37 orders' },
+            { label: 'Week 4 (Oct 22-31)', shortLabel: 'Wk 4', revenue: 110, orders: 49, students: 58, revGh: 'GH₵ 11,000', ordersCount: '49 orders' },
+          ]
+        };
+    }
+  }, [
+    timeframe, 
+    baseMonthlyRevenue, 
+    baseMonthlyPayroll, 
+    baseCommissionPerPiece, 
+    baseCompletedPieces, 
+    inProgressOrdersCount, 
+    rawStudentFeesCollected, 
+    totalStudentFeesReceivable, 
+    students.length, 
+    workers.length, 
+    activeWorkersCount, 
+    payroll.length
+  ]);
+
+  // SVG Chart points and paths calculated dynamically
+  const chartPoints = useMemo(() => {
+    const data = timeframeMetrics.chartData;
+    const n = data.length;
+    const maxRev = Math.max(...data.map(d => d.revenue), 1);
+    const maxOrders = Math.max(...data.map(d => d.orders), 1);
+    const maxStudents = Math.max(...data.map(d => d.students), 1);
+
+    const pointsRev = data.map((d, i) => {
+      const x = n === 1 ? 450 : 60 + (i / (n - 1)) * 780;
+      const y = Math.round(175 - (d.revenue / (maxRev * 1.15)) * 145);
+      return { ...d, x, y };
+    });
+
+    const pointsOrders = data.map((d, i) => {
+      const x = n === 1 ? 450 : 60 + (i / (n - 1)) * 780;
+      const y = Math.round(180 - (d.orders / (maxOrders * 1.15)) * 140);
+      return { ...d, x, y };
+    });
+
+    const pointsStudents = data.map((d, i) => {
+      const x = n === 1 ? 450 : 60 + (i / (n - 1)) * 780;
+      const y = Math.round(185 - (d.students / (maxStudents * 1.15)) * 135);
+      return { ...d, x, y };
+    });
+
+    const revLinePath = generateSmoothSvgPath(pointsRev);
+    const ordersLinePath = generateSmoothSvgPath(pointsOrders);
+    const studentsLinePath = generateSmoothSvgPath(pointsStudents);
+
+    const revAreaPath = pointsRev.length > 0
+      ? `${revLinePath} L ${pointsRev[pointsRev.length - 1].x} 195 L ${pointsRev[0].x} 195 Z`
+      : '';
+    const ordersAreaPath = pointsOrders.length > 0
+      ? `${ordersLinePath} L ${pointsOrders[pointsOrders.length - 1].x} 195 L ${pointsOrders[0].x} 195 Z`
+      : '';
+
+    return {
+      pointsRev,
+      pointsOrders,
+      pointsStudents,
+      revLinePath,
+      ordersLinePath,
+      studentsLinePath,
+      revAreaPath,
+      ordersAreaPath,
+    };
+  }, [timeframeMetrics]);
 
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2059,31 +2246,38 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
-          <button
-            onClick={() => setTimeframe('month')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              timeframe === 'month' ? 'bg-white text-purple-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setTimeframe('quarter')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              timeframe === 'quarter' ? 'bg-white text-purple-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Quarter
-          </button>
-          <button
-            onClick={() => setTimeframe('year')}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
-              timeframe === 'year' ? 'bg-white text-purple-900 shadow-xs' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Fiscal Year
-          </button>
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2.5">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-900 border border-purple-100/90 text-xs font-bold shadow-2xs">
+            <Calendar className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+            <span>{timeframeMetrics.dateRangeBadge}</span>
+          </div>
+
+          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
+            <button
+              onClick={() => setTimeframe('month')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                timeframe === 'month' ? 'bg-white text-purple-900 shadow-xs font-bold' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              This Month
+            </button>
+            <button
+              onClick={() => setTimeframe('quarter')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                timeframe === 'quarter' ? 'bg-white text-purple-900 shadow-xs font-bold' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Quarter
+            </button>
+            <button
+              onClick={() => setTimeframe('year')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                timeframe === 'year' ? 'bg-white text-purple-900 shadow-xs font-bold' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Fiscal Year
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2118,9 +2312,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
             <div className="bg-white p-5 rounded-3xl border border-purple-100 shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tuition Fees Collected</span>
-                <div className="text-2xl font-black text-purple-900 pt-1">GH₵ {totalStudentFeesCollected.toLocaleString()}</div>
-                <div className="text-[10px] text-gray-500 mt-1">of GH₵ {totalStudentFeesReceivable.toLocaleString()} total</div>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tuition Fees Collected ({timeframeMetrics.label})</span>
+                <div className="text-2xl font-black text-purple-900 pt-1">GH₵ {timeframeMetrics.tuitionFeesCollected.toLocaleString()}</div>
+                <div className="text-[10px] text-gray-500 mt-1">of GH₵ {timeframeMetrics.tuitionFeesReceivable.toLocaleString()} total</div>
               </div>
               <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
                 <DollarSign className="w-6 h-6" />
@@ -2436,17 +2630,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             </div>
 
             <div className="bg-white p-5 rounded-3xl border border-emerald-100 shadow-xs">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Completed Garments</span>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Completed Garments ({timeframeMetrics.label})</span>
               <div className="text-2xl font-black text-gray-900 pt-1">
-                {workers.reduce((sum, w) => sum + w.completedOrdersCount, 0)} Pieces
+                {timeframeMetrics.completedPieces} Pieces
               </div>
               <div className="text-[11px] text-emerald-600 font-bold mt-1">High Quality Standard</div>
             </div>
 
             <div className="bg-white p-5 rounded-3xl border border-purple-100 shadow-xs">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Piece Rate Paid</span>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Piece Rate Paid ({timeframeMetrics.label})</span>
               <div className="text-2xl font-black text-purple-900 pt-1">
-                GH₵ {workers.reduce((sum, w) => sum + (w.completedOrdersCount * w.commissionPerPiece), 0).toLocaleString()}
+                GH₵ {timeframeMetrics.pieceRatePaid.toLocaleString()}
               </div>
               <div className="text-[11px] text-purple-600 font-bold mt-1">Direct Artisan Commissions</div>
             </div>
@@ -2590,23 +2784,23 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-3xl border border-emerald-100 shadow-xs">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Business Revenue</span>
-              <div className="text-2xl font-black text-gray-900 pt-1">GH₵ {(totalRevenue + 7100).toLocaleString()}</div>
-              <div className="text-[11px] text-emerald-600 font-bold mt-1">Orders & Academy Tuition</div>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Business Revenue ({timeframeMetrics.label})</span>
+              <div className="text-2xl font-black text-gray-900 pt-1">GH₵ {timeframeMetrics.revenue.toLocaleString()}</div>
+              <div className="text-[11px] text-emerald-600 font-bold mt-1">Orders &amp; Academy Tuition ({timeframeMetrics.periodName})</div>
             </div>
 
             <div className="bg-white p-5 rounded-3xl border border-purple-100 shadow-xs">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Monthly Payroll Expense</span>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Payroll Expense ({timeframeMetrics.label})</span>
               <div className="text-2xl font-black text-purple-900 pt-1">
-                GH₵ {payroll.reduce((sum, p) => sum + p.netPay, 0).toLocaleString()}
+                GH₵ {timeframeMetrics.payrollExpense.toLocaleString()}
               </div>
-              <div className="text-[11px] text-purple-600 font-bold mt-1">{payroll.length} Disbursed Slips</div>
+              <div className="text-[11px] text-purple-600 font-bold mt-1">{timeframeMetrics.payrollSlipsLabel}</div>
             </div>
 
             <div className="bg-white p-5 rounded-3xl border border-blue-100 shadow-xs">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Net Operating Margin</span>
-              <div className="text-2xl font-black text-blue-900 pt-1">68.4%</div>
-              <div className="text-[11px] text-blue-600 font-bold mt-1">Healthy Enterprise Health</div>
+              <div className="text-2xl font-black text-blue-900 pt-1">{timeframeMetrics.operatingMargin}%</div>
+              <div className="text-[11px] text-blue-600 font-bold mt-1">Net: GH₵ {(timeframeMetrics.revenue - timeframeMetrics.payrollExpense).toLocaleString()} ({timeframeMetrics.label})</div>
             </div>
           </div>
 
@@ -2678,11 +2872,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Students</span>
                 </div>
                 <div className="text-2xl font-black text-gray-900 pt-1">
-                  {students.length > 0 ? students.length + 117 : 120}
+                  {timeframeMetrics.studentsCount}
                 </div>
                 <div className="flex items-center text-[11px] text-emerald-600 font-bold">
                   <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                  <span>+12% this month</span>
+                  <span>{timeframeMetrics.studentsGrowth}</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-medium">
+                  {timeframeMetrics.studentsSubtitle}
                 </div>
               </div>
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-300">
@@ -2700,10 +2897,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Workers</span>
                 </div>
                 <div className="text-2xl font-black text-gray-900 pt-1">
-                  {workers.length + 12}
+                  {timeframeMetrics.workersCount}
                 </div>
                 <div className="text-[11px] text-amber-700 font-bold">
-                  <span>{activeWorkersCount + 13} Present today</span>
+                  <span>{timeframeMetrics.workersSubtitle}</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-medium">
+                  Active workshop roster
                 </div>
               </div>
               <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-300">
@@ -2721,10 +2921,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Orders</span>
                 </div>
                 <div className="text-2xl font-black text-gray-900 pt-1">
-                  {inProgressOrdersCount + 45}
+                  {timeframeMetrics.ordersCount}
                 </div>
-                <div className="text-[11px] text-pink-700 font-bold">
-                  <span>In progress &amp; fitting</span>
+                <div className="flex items-center text-[11px] text-pink-700 font-bold">
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
+                  <span>{timeframeMetrics.ordersGrowth}</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-medium">
+                  {timeframeMetrics.ordersSubtitle}
                 </div>
               </div>
               <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center text-pink-300">
@@ -2742,11 +2946,14 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Revenue</span>
                 </div>
                 <div className="text-2xl font-black text-gray-900 pt-1">
-                  GH₵ {(totalRevenue + 7100).toLocaleString()}
+                  GH₵ {timeframeMetrics.revenue.toLocaleString()}
                 </div>
                 <div className="flex items-center text-[11px] text-blue-600 font-bold">
                   <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                  <span>+18% this month</span>
+                  <span>{timeframeMetrics.revenueGrowth}</span>
+                </div>
+                <div className="text-[10px] text-gray-400 font-medium">
+                  {timeframeMetrics.revenueComparison}
                 </div>
               </div>
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-300">
@@ -2761,8 +2968,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-purple-100 shadow-xs">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="font-bold text-gray-900 text-base">Monthly Performance Overview</h3>
-                  <p className="text-xs text-gray-500">Correlation between academy enrollments, bespoke orders, and revenue (GH₵ &apos;00s)</p>
+                  <h3 className="font-bold text-gray-900 text-base">{timeframeMetrics.chartTitle}</h3>
+                  <p className="text-xs text-gray-500">{timeframeMetrics.chartSubtitle}</p>
                 </div>
                 <div className="flex items-center space-x-4 text-xs font-semibold">
                   <span className="flex items-center gap-1.5 text-blue-600">
@@ -2789,58 +2996,105 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                 <svg className="w-full h-full overflow-visible" viewBox="0 0 900 200">
                   <defs>
                     <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.3" />
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
                       <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
                     </linearGradient>
                     <linearGradient id="pinkGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#db2777" stopOpacity="0.2" />
+                      <stop offset="0%" stopColor="#db2777" stopOpacity="0.18" />
                       <stop offset="100%" stopColor="#db2777" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
 
+                  {/* Gradient Area Fills */}
+                  {chartPoints.revAreaPath && (
+                    <path d={chartPoints.revAreaPath} fill="url(#blueGrad)" />
+                  )}
+                  {chartPoints.ordersAreaPath && (
+                    <path d={chartPoints.ordersAreaPath} fill="url(#pinkGrad)" />
+                  )}
+
                   {/* Revenue Line (Blue) */}
                   <path
-                    d="M 50 160 Q 150 140, 250 125 T 450 90 T 650 60 T 850 20"
+                    d={chartPoints.revLinePath}
                     fill="none"
                     stroke="#2563eb"
                     strokeWidth="3.5"
                     strokeLinecap="round"
+                    className="transition-all duration-300"
                   />
                   {/* Orders Line (Pink) */}
                   <path
-                    d="M 50 170 Q 150 155, 250 145 T 450 120 T 650 95 T 850 70"
+                    d={chartPoints.ordersLinePath}
                     fill="none"
                     stroke="#db2777"
                     strokeWidth="3"
                     strokeLinecap="round"
+                    className="transition-all duration-300"
                   />
                   {/* Students Line (Emerald) */}
                   <path
-                    d="M 50 180 Q 150 170, 250 160 T 450 140 T 650 110 T 850 85"
+                    d={chartPoints.studentsLinePath}
                     fill="none"
                     stroke="#059669"
                     strokeWidth="3"
                     strokeDasharray="4 4"
                     strokeLinecap="round"
+                    className="transition-all duration-300"
                   />
 
-                  {/* Data points */}
-                  {monthlyData.map((d, i) => {
-                    const x = 50 + i * 100;
+                  {/* Interactive Data points */}
+                  {chartPoints.pointsRev.map((p, i) => {
+                    const orderP = chartPoints.pointsOrders[i];
+                    const studentP = chartPoints.pointsStudents[i];
                     return (
-                      <g key={d.month} className="group cursor-pointer">
-                        <circle cx={x} cy={180 - d.revenue} r="4.5" fill="#2563eb" className="hover:r-6 transition-all" />
-                        <circle cx={x} cy={195 - d.orders * 1.6} r="4" fill="#db2777" />
-                        <circle cx={x} cy={200 - d.students * 0.9} r="3.5" fill="#059669" />
+                      <g key={p.label || i} className="group cursor-pointer">
+                        {/* Revenue Circle */}
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r="5"
+                          fill="#2563eb"
+                          className="hover:r-7 transition-all duration-200"
+                        >
+                          <title>{`${p.label}\nRevenue: ${p.revGh}`}</title>
+                        </circle>
+
+                        {/* Orders Circle */}
+                        {orderP && (
+                          <circle
+                            cx={orderP.x}
+                            cy={orderP.y}
+                            r="4.5"
+                            fill="#db2777"
+                            className="hover:r-6 transition-all duration-200"
+                          >
+                            <title>{`${p.label}\nOrders: ${p.ordersCount}`}</title>
+                          </circle>
+                        )}
+
+                        {/* Students Circle */}
+                        {studentP && (
+                          <circle
+                            cx={studentP.x}
+                            cy={studentP.y}
+                            r="4"
+                            fill="#059669"
+                            className="hover:r-5 transition-all duration-200"
+                          >
+                            <title>{`${p.label}\nStudents: ${p.students} enrolled`}</title>
+                          </circle>
+                        )}
                       </g>
                     );
                   })}
                 </svg>
 
-                {/* Months Axis Labels */}
+                {/* X Axis Labels */}
                 <div className="flex justify-between text-[11px] font-bold text-gray-500 pt-2 px-3 border-t border-gray-100 mt-2">
-                  {monthlyData.map((d) => (
-                    <span key={d.month}>{d.month}</span>
+                  {chartPoints.pointsRev.map((p) => (
+                    <span key={p.label} className="truncate max-w-[80px] text-center" title={p.label}>
+                      {p.shortLabel}
+                    </span>
                   ))}
                 </div>
               </div>

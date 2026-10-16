@@ -18,6 +18,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+import { alertConfirm, showToast } from '@/lib/alerts';
+
 interface NavbarProps {
   activeRole: Role;
   onSelectRole?: (role: Role) => void;
@@ -39,6 +41,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+
+  const handleLogout = async () => {
+    setShowUserDropdown(false);
+    const confirmed = await alertConfirm({
+      title: 'Sign Out?',
+      text: 'Are you sure you want to log out of your StitchFlow session?',
+      confirmText: 'Yes, Sign Out',
+      cancelText: 'Stay Logged In',
+      icon: 'question',
+    });
+    if (confirmed) {
+      showToast.info('Signing out of StitchFlow...');
+      await logout();
+    }
+  };
 
   const roleTitles: Record<Role, { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
     owner: { title: 'Executive Owner Dashboard', subtitle: 'Business intelligence, revenue & school metrics', icon: ShieldCheck, color: 'text-purple-700' },
@@ -134,11 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     <div className="space-y-1">
                       <button
-                        onClick={() => {
-                          logout();
-                          setShowUserDropdown(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 font-semibold flex items-center justify-between"
+                        onClick={handleLogout}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 text-rose-700 font-semibold flex items-center justify-between transition-colors"
                       >
                         <span className="flex items-center gap-2">
                           <LogOut className="w-4 h-4 text-rose-600" />

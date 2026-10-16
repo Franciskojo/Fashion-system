@@ -13,6 +13,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { showToast, alertSuccess } from '@/lib/alerts';
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -47,12 +49,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setIsSubmitting(false);
 
     if (res.success) {
-      if (onSuccessRole) {
-        // Will match user's role
+      const displayName = res.user?.name || 'User';
+      showToast.success(`Welcome, ${displayName}! Signed in successfully.`);
+      if (onSuccessRole && res.user?.role) {
+        onSuccessRole(res.user.role);
       }
       onClose();
     } else {
-      setErrorMsg(res.error || 'Authentication failed');
+      const err = res.error || 'Authentication failed';
+      setErrorMsg(err);
+      showToast.error(err);
     }
   };
 
@@ -65,10 +71,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     setIsSubmitting(false);
 
     if (res.success) {
+      alertSuccess('Account Created!', `Welcome to StitchFlow, ${regName}! Your bespoke portal is ready.`);
+      showToast.success('Account created successfully!');
       if (onSuccessRole) onSuccessRole('customer');
       onClose();
     } else {
-      setErrorMsg(res.error || 'Registration failed');
+      const err = res.error || 'Registration failed';
+      setErrorMsg(err);
+      showToast.error(err);
     }
   };
 
